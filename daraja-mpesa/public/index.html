@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PowerBeam Payment</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0 15px;
+      background: #f1fdf3;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .container {
+      margin-top: 50px;
+      background: #fff;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 25px;
+      font-weight: 600;
+      font-size: 1.8rem;
+      color: #34B233; /* M-Pesa green */
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 12px 15px;
+      margin-bottom: 20px;
+      border: 1.8px solid #ccc;
+      border-radius: 7px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      border-color: #34B233;
+      outline: none;
+      box-shadow: 0 0 6px #34B23388;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px 0;
+      background-color: #34B233;
+      border: none;
+      border-radius: 7px;
+      color: white;
+      font-size: 1.15rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover,
+    button:focus {
+      background-color: #278F27;
+    }
+
+    #status {
+      margin-top: 15px;
+      font-size: 0.95rem;
+      color: #555;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 20px 20px;
+        margin-top: 30px;
+      }
+
+      h2 {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Pay with M-Pesa</h2>
+
+    <input
+      type="text"
+      id="phone"
+      placeholder="Enter phone e.g. 254708374149"
+      pattern="254(7|1)[0-9]{8}"
+      maxlength="12"
+      inputmode="numeric"
+      autocomplete="tel"
+    />
+
+    <input
+      type="number"
+      id="amount"
+      placeholder="Enter amount"
+      min="1"
+      inputmode="decimal"
+    />
+
+    <button id="payBtn">Pay Now</button>
+
+    <div id="status"></div>
+  </div>
+
+  <script>
+    // Autofill values from query params (?amount=xxx&phone=xxx)
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const amount = params.get('amount');
+      const phone = params.get('phone');
+      if (amount) document.getElementById('amount').value = amount;
+      if (phone) document.getElementById('phone').value = phone;
+    });
+
+    // Payment logic
+    document.getElementById('payBtn').addEventListener('click', async () => {
+      const phone = document.getElementById('phone').value.trim();
+      const amount = document.getElementById('amount').value.trim();
+      const statusDiv = document.getElementById('status');
+      statusDiv.textContent = 'Initiating payment...';
+
+      if (!/^254(7|1)\d{8}$/.test(phone)) {
+        statusDiv.textContent = '❌ Enter valid Safaricom number (2547XXXXXXXX or 2541XXXXXXXX)';
+        return;
+      }
+
+      if (!amount || amount <= 0) {
+        statusDiv.textContent = '❌ Enter valid amount greater than 0';
+        return;
+      }
+
+      try {
+        const response = await fetch('/pay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, amount })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          statusDiv.textContent = '✅ STK Push Sent! Check your phone.';
+        } else {
+          statusDiv.textContent = '❌ ' + (data.message || 'Payment failed.');
+        }
+      } catch (err) {
+        statusDiv.textContent = '❌ Network error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

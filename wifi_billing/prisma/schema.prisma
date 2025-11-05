@@ -1,0 +1,52 @@
+// Prisma schema for WiFi Billing System
+// Edit the DATABASE_URL in .env before running migrations
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id       Int     @id @default(autoincrement())
+  email    String  @unique
+  password String
+  role     String  @default("admin")
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  phone         String   @unique
+  macAddress    String
+  status        String
+  currentPackage String?
+  expiresAt     DateTime?
+  totalSpent    Int      @default(0)
+  sessionsCount Int      @default(0)
+  lastSeen      DateTime?
+  payments      Payment[]
+}
+
+model Payment {
+  id            Int      @id @default(autoincrement())
+  phone         String
+  amount        Int
+  transactionId String   @unique
+  macAddress    String
+  status        String
+  timePurchased DateTime @default(now())
+  mpesaRef      String?
+  expiresAt     DateTime?
+  userId        Int?
+  user          User?    @relation(fields: [userId], references: [id])
+}
+
+model SupportRequest {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  message   String
+  createdAt DateTime @default(now())
+}

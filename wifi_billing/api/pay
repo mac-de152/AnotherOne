@@ -1,0 +1,50 @@
+const express = require("express");
+const axios = require("axios");
+const db = require("../config/db");
+const { whitelistMAC } = require("../config/mikrotik");
+
+const router = express.Router();
+
+router.post("/pay", async (req, res) => {
+  const { phone, amount, mac } = req.body;
+
+  // Validate incoming data
+  if (!phone || !amount || !mac) {
+    return res.status(400).json({ success: false, message: "Missing required fields" });
+  }
+
+  // Generate a unique transaction ID for tracking
+  const transactionId = Date.now().toString();
+
+  // Store the payment request in DB (status pending)
+  db.query(
+    "INSERT INTO payments (transaction_id, phone, amount, mac_address, status) VALUES (?, ?, ?, ?, ?)",
+    [transactionId, phone, amount, mac, "pending"],
+    async (err, result) => {
+      if (err) {
+        console.error("DB Error:", err);
+        return res.status(500).json({ success: false, message: "Database insertion failed" });
+      }
+
+      // Initiate M-Pesa STK Push
+      try {
+        const mpesaResponse = await axios.post("https://your-mpesa-api-endpoint", {
+          phone,
+          amount,
+          transactionId
+        });
+
+        if (mpesaResponse.data.success) {
+          return res.json({ success: true, message: "M-Pesa payment request sent successfully", transactionId });
+        } else {
+          return res.status(500).json({ success: false, message: "M-Pesa payment request failed" });
+        }
+      } catch (error) {
+        console.error("M-Pesa API Error:", error);
+        return res.status(500).json({ success: false, message: "M-Pesa API request failed" });
+      }
+    }
+  );
+});
+
+module.exports = router;

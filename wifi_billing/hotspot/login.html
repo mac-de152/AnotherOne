@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WiFi Payment</title>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: Arial; padding: 20px; text-align: center; }
+    .box { max-width: 400px; margin: auto; background: #f4f4f4; padding: 20px; border-radius: 10px; }
+    input, select, button { width: 100%; margin: 10px 0; padding: 10px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Pay to Access WiFi</h2>
+
+    <form id="paymentForm">
+      <input type="tel" id="phone" placeholder="Enter Safaricom number" required />
+      
+      <select id="duration" required>
+        <option value="">Select Duration</option>
+        <option value="10">1 Hour (10 KES)</option>
+        <option value="15">4 Hours (15 KES)</option>
+        <option value="20">12 Hours (20 KES)</option>
+        <option value="30">24 Hours (30 KES)</option>
+      </select>
+
+      <input type="text" id="mac" placeholder="Device MAC (auto-filled if possible)" required />
+
+      <button type="submit">Pay with M-Pesa</button>
+    </form>
+
+    <p id="status"></p>
+  </div>
+
+  <script>
+    document.getElementById("mac").value = window.location.search.split("mac=")[1]?.split("&")[0] || "";
+
+    document.getElementById("paymentForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const phone = document.getElementById("phone").value;
+      const amount = document.getElementById("duration").value;
+      const mac = document.getElementById("mac").value;
+
+      document.getElementById("status").innerText = "Processing payment...";
+
+      try {
+        const res = await fetch("http://localhost:5000/api/payments/initiate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, amount, macAddress: mac })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          document.getElementById("status").innerText = "STK sent. Complete payment on your phone.";
+        } else {
+          document.getElementById("status").innerText = "Payment failed: " + data.message;
+        }
+      } catch (err) {
+        document.getElementById("status").innerText = "Error: Could not reach server.";
+      }
+    });
+  </script>
+</body>
+</html>
