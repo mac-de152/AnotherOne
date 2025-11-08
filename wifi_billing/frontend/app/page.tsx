@@ -43,6 +43,7 @@ export default function UserPortal() {
   const [transactionId, setTransactionId] = useState<string | null>(null)
   const [status, setStatus] = useState<"pending" | "completed" | "failed" | "">("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoanLoading, setIsLoanLoading] = useState(false)
   const [macAddress, setMacAddress] = useState("Loading...");
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [paymentData, setPaymentData] = useState<any>(null)
@@ -169,6 +170,64 @@ export default function UserPortal() {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleLoan = async () => {
+    // Check if user is authenticated first
+    const token = localStorage.getItem('user_token')
+    if (!token) {
+      // Redirect to login page
+      window.location.href = '/login'
+      return
+    }
+
+    // Validation
+    if (!/^(07|01)\d{8}$/.test(phone)) {
+      toast.error("Invalid phone number", {
+        description: "Please enter a valid 10-digit phone number starting with 07 or 01",
+      })
+      return
+    }
+
+    if (!amount) {
+      toast.error("No package selected", {
+        description: "Please select a package before proceeding",
+      })
+      return
+    }
+
+    const selectedPackage = packages.find((p) => p.value === amount)
+    if (!selectedPackage) {
+      toast.error("Invalid package selected")
+      return
+    }
+
+    setIsLoanLoading(true)
+
+    toast.loading("Processing Okoa Internet application...", {
+      description: `${selectedPackage.price} for ${selectedPackage.label}`,
+      id: "loan-loading",
+    })
+
+    try {
+      // Simulate Okoa Internet processing (replace with actual API call when ready)
+      await new Promise(resolve => setTimeout(resolve, 3000))
+
+      toast.dismiss("loan-loading")
+      toast.success("Okoa Internet application submitted!", {
+        description: "You will receive a confirmation SMS shortly",
+        duration: 4000,
+      })
+    } catch (error) {
+      toast.dismiss("loan-loading")
+      const errMsg = error instanceof Error ? error.message : String(error)
+      toast.error("Okoa Internet application failed", {
+        description: errMsg || "An unexpected error occurred. Please try again.",
+        duration: 4000,
+      })
+    } finally {
+      setIsLoanLoading(false)
     }
   }
 
@@ -319,24 +378,44 @@ export default function UserPortal() {
                     </div>
                   </div>
 
-                  {/* Payment Button */}
-                  <Button
-                    onClick={handlePayment}
-                    disabled={isLoading || !phone || phone.length !== 10}
-                    className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all duration-300 disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-5 h-5 mr-2" />
-                        Pay with M-Pesa - {packages.find((p) => p.value === amount)?.price}
-                      </>
-                    )}
-                  </Button>
+                  {/* Payment Buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handlePayment}
+                      disabled={isLoading || !phone || phone.length !== 10}
+                      className="flex-1 h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all duration-300 disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5 mr-2" />
+                          Pay with M-Pesa - {packages.find((p) => p.value === amount)?.price}
+                        </>
+                      )}
+                    </Button>
+
+                    <Button
+                      onClick={handleLoan}
+                      disabled={isLoanLoading || isLoading || !phone || phone.length !== 10}
+                      className="flex-1 h-12 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold transition-all duration-300 disabled:opacity-50"
+                    >
+                      {isLoanLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          Processing loan...
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="w-5 h-5 mr-2" />
+                          Okoa Internet
+                        </>
+                      )}
+                    </Button>
+                  </div>
 
                   <StatusDisplay status={status} />
                 </CardContent>
