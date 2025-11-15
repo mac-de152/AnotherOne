@@ -1,31 +1,32 @@
-# Use Node.js 18 LTS
-FROM node:18-alpine
+# ---------------------------------------
+# 1. Build Next.js frontend
+# ---------------------------------------
+FROM node:18-alpine AS frontend
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend .
+RUN npm run build
 
-# Set working directory
+# ---------------------------------------
+# 2. Setup backend with frontend build
+# ---------------------------------------
+FROM node:18-alpine AS backend
 WORKDIR /app
-
-# Install dependencies first (for better caching)
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci --only=production
+RUN npm install --production && npx prisma generate
 
-# Copy source code
+# Copy all backend files
 COPY . .
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
+# Copy Next.js build output to backend
+COPY --from=frontend /app/frontend/.next ./frontend/.next
+COPY --from=frontend /app/frontend/public ./frontend/public
+COPY --from=frontend /app/frontend/package.json ./frontend/
 
-# Change ownership of app directory
-RUN chown -R nextjs:nodejs /app
-USER nextjs
-
-# Expose port
+# ---------------------------------------
+# 3. Run the integrated server
+# ---------------------------------------
 EXPOSE 5000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node healthcheck.js
-
-# Start the application
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
